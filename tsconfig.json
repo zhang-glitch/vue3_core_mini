@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    // 这个是生成js对应的ts文件的sourceMap
+    "sourceMap": true,
+    "esModuleInterop": true,
+    // 指定如何查找引入的文件
+    "moduleResolution": "node",
+    "target": "es2016",
+    // 允许为读取的变量
+    "noUnusedLocals": false,
+    // 允许未读取的参数
+    "noUnusedParameters": false,
+    // 支持语法迭代
+    "downlevelIteration": true,
+    // 允许解析json
+    "resolveJsonModule": true,
+    // 允许使用隐式的any类型
+    "noImplicitAny": false,
+    "module": "esnext",
+    // 转换js时，从ts文件中删除所有注释
+    "removeComments": false,
+    "lib": ["esnext", "dom"],
+    "newLine": "LF",
+    // 路径别名
+    "baseUrl": ".",
+    "paths": {
+      "@vue/*": ["packages/*/src"],
+    }
+  },
+}
+
