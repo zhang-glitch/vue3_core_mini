@@ -1,4 +1,1 @@
-// 我是注释
-const a = new Object()
-
-console.log('a', a)
+export { reactive, effect } from '@vue/reactivity'

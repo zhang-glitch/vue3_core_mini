@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    // 当通过代理对象改变属性时，原对象也会被改变。
+    const target = {
+      name: "zh"
+    }
+
+    const proxyObj = new Proxy(target, {
+      set(target, key, value) {
+        // target[key] = value
+        Reflect.set(target, key, value)
+        return true
+      }
+    })
+
+
+    proxyObj.name = "eqewq"
+    console.log("targte", target, proxyObj)
+  </script>
+</body>
+
+</html>
