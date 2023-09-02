@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>runtime demo</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+
+<body>
+  <script>
+    // 运行时可以利用render把vnode渲染成真实的dom节点。 
+    const vnode={
+      type: "p",
+      props: {
+        class: "pp"
+      },
+      children: "运行时"
+    }
+
+    function render (vnode) {
+      const node=document.createElement(vnode.type)
+      node.className=vnode.props.class
+      node.innerHTML=vnode.children
+      document.body.appendChild(node)
+    }
+
+    render(vnode)
+  </script>
+</body>
+
+</html>
