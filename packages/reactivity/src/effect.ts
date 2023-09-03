@@ -28,12 +28,21 @@ export function track(target: object, key: string | symbol) {
   }
 
   // 获取当前是否有set对象
-  let deps: Deps = targetMap.get(key)
+  let deps = targetMap.get(key)
   if (!deps) {
     // 用于存放ReactiveEffect对象
     targetMap.set(key, (deps = createDeps()))
   }
 
+  // 收集依赖函数
+  trackEffects(deps)
+
+}
+
+/**
+ * 利用deps 依次跟踪指定 key 的所有effect
+ */
+export function trackEffects(deps: Deps) {
   deps.add(activeEffect!) // 添加对应的依赖函数, 确保activeEffect一定是有值的。
 }
 
@@ -47,9 +56,25 @@ export function trigger(target: object, key: string | symbol) {
   const deps = targetMap.get(key)
 
   if (!deps) return
-  ;[...deps].forEach(item => {
-    item.run()
+
+  triggerEffects(deps)
+}
+
+/**
+ * 触发指定 key 收集的依赖函数
+ */
+export function triggerEffects(deps: Deps) {
+  [...deps].forEach(effect => {
+    triggerEffect(effect)
   })
+}
+
+/**
+ * 
+ * 触发一个依赖函数
+ */
+export function triggerEffect(effect: ReactiveEffect) {
+  effect.run()
 }
 
 // 接收一个函数并触发。
