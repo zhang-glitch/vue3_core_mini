@@ -13,9 +13,10 @@
   <div id="app"></div>
   <script>
     const { reactive, effect } = Vue
-    const obj = reactive({
+    const target = {
       name: "zh"
-    })
+    }
+    const obj = reactive(target)
 
     effect(() => {
       document.getElementById("app").innerHTML = obj.name
@@ -24,7 +25,9 @@
 
     setTimeout(() => {
       obj.name = "llm"
+      console.log("target", target)
     }, 1000)
+
   </script>
 </body>
 
