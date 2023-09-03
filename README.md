@@ -351,3 +351,63 @@ trigger
 #### reactive局限性
 - 不能处理基本数据类型。因为Proxy代理的是一个对象。
 - 不能进行解构，结构后将失去响应性。因为响应性是通过代理对象进行处理的。结构后就不存在代理对象了，因此就不具备响应式了。
+### ref
+
+#### 测试用例
+```js
+const { ref, effect } = Vue
+
+const obj = ref({
+  name: "zh"
+})
+
+effect(() => {
+  // 先触发ref的 getter 行为 （触发trackValue触发ref的依赖收集，放在ref实例的dep中，当ref对象直接修改时，直接触发get value进行依赖函数执行）
+  // value.name 又触发代理对象的 getter 行为 （这个是将effect回调和代理对象的 key 进行绑定的）
+  document.getElementById("app").innerHTML = obj.value.name
+})
+
+setTimeout(() => {
+  // 先触发ref的 getter 行为
+  // value.name 又触发代理对象的 setter 行为
+  obj.value.name = "oop"
+}, 1000)
+```
+#### 断点跟踪vue源码
+- RefImpl类创建一个ref实例。
+- RefImpl中判断当传入的是否是一个对象，是则直接调用reactive做响应式。将其代理对象赋值给ref对象的`_value`属性保存。
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7801c70e7233435da6dd19fd1790e0c1~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1272&h=846&s=146264&e=png&b=fcf5e2)
+- RefImpl中提供`get value`,`set value`方法。在我们处理（读取value属性和为value属性赋值）ref对象时，就会调用对应的方法进行依赖收集和依赖触发。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7fd2fc8137f044db9a67942ebee61139~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1142&h=524&s=115500&e=png&b=fdf6e3)
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/febbe951b10a4088b4bbf0300151d24e~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1718&h=814&s=178204&e=png&b=fefcfc)
+
+然后`obj.value.name`又会触发代理对象name属性的依赖收集。
+#### 总结
+
+**obj.value就是一个reactive返回的代理对象** ，这里并没有触发set value。不管是对复杂数据类型赋值还是读值，他都值触发refImpl实例的get value。 
+
+**但是对于简单数据类型就不一样了。** 构建简单数据类型时，**他并不是通过代理对象去触发依赖收集和依赖触发的。而是通过refImpl中的get value set value主动去收集依赖和触发依赖的，这就是为啥get value 中的trackValue将依赖收集到ref实例的dep中的原因。**
+
+**ref复杂数据类型**
+
+- 对于 ref 函数，会返回 RefImpl 类型的实例
+
+- 在该实例中，会根据传入的数据类型进行分开处理
+
+    - 复杂数据类型：转化为 reactive 返回的 proxy 实例。在获取`ref.value`时返回的就是proxy实例。
+
+    - 简单数据类型：不做处理
+
+- 无论我们执行 obj.value.name, 还是 obj.value.name＝xxx, 本质上都是触发了 get value。
+
+- 响应性 是因为 obj.value 是一个reactive 函数生成的 proxy
+
+**ref简单数据类型**
+
+我们需要知道的最重要的一点是：**简单数据类型，不具备数据件监听的概念，即本身并不是响应性的。**
+
+只是因为 vue 通过了 set value（）的语法，把 函数调用变成了属性调用的形式，让我们通过主动调用该函数，来完成了一个“类似于”响应性的结果。
+
+我们就知道了网上所说的，ref的响应性就是将其参数包裹到value中传入reactive实现的，了解了这些，我们就可以大胆的说扯淡了。

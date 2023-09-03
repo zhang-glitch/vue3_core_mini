@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../../dist/vue.global.js"></script>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    const { ref, effect } = Vue
+    const target = {
+      name: "zh"
+    }
+    const obj = ref(target)
+
+    // 他的目的是赋值activeEffect
+    effect(() => {
+      console.log("=========================")
+      document.getElementById("app").innerHTML = obj.value.name
+    })
+
+
+    setTimeout(() => {
+      obj.value.name = "zh"
+      // obj.value = "-------"
+    }, 1000)
+
+  </script>
+</body>
+
+</html>
