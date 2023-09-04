@@ -66,6 +66,10 @@ export function trigger(target: object, key: string | symbol) {
  * 触发指定 key 收集的依赖函数
  */
 export function triggerEffects(deps: Deps) {
+  
+  // 先执行computed reactiveEffect，防止出现死循环。如果最后一次执行computed reactiveEffect，那么将会触发scheduler，触发computed get value, 又收集依赖，不断循环。
+
+  // 为了做到多次获取computed值，做缓存处理
   [...deps].forEach(effect => {
     if(effect.computed) {
       triggerEffect(effect)
@@ -73,7 +77,9 @@ export function triggerEffects(deps: Deps) {
   });
 
   [...deps].forEach(effect => {
-    triggerEffect(effect)
+    if(!effect.computed) {
+      triggerEffect(effect)
+    }
   })
 }
 

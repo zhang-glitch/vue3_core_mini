@@ -411,3 +411,74 @@ setTimeout(() => {
 只是因为 vue 通过了 set value（）的语法，把 函数调用变成了属性调用的形式，让我们通过主动调用该函数，来完成了一个“类似于”响应性的结果。
 
 我们就知道了网上所说的，ref的响应性就是将其参数包裹到value中传入reactive实现的，了解了这些，我们就可以大胆的说扯淡了。
+### 计算属性computed
+计算属性computed会基于其响应式依赖被缓存，并且在依赖的响应式数据发生变化时重新计算。
+
+计算属性也是一个ref对象。
+#### 测试用例
+```js
+  <div id="app"></div>
+  <script>
+    const { computed, reactive, effect } = Vue;
+
+    const obj = reactive({
+      name: "zh"
+    })
+
+
+    const computedObj = computed(() => {
+      return "执行" + obj.name
+    })
+
+    effect(() => {
+      // 触发ComputedRefImpl 的 get value
+      document.getElementById("app").innerHTML = computedObj.value
+    })
+
+    setTimeout(() => {
+      obj.name = "llm"
+    }, 2000)
+  </script> 
+```
+我们先来介绍一下执行流程，再看断点调试。
+- 上来先执行computed，创建一个computedRef对象。（所有computed对象都是Ref对象）
+- 初始化computedRef对象时，创建一个`ReactiveEffect`对象。并将computed的getter函数传入。
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/609b35b0b831440eaf2fe8b94dd966cb~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1207&h=772&s=148912&e=png&b=fcf5e2)
+- 然后执行effect，创建`ReactiveEffect`对象,并将`effect`回调传入。
+- 然后`computedObj.value`触发computed对象的get value, 收集执行effect创建的`ReactiveEffect`对象。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3dddb7ea9cec48a8aeba68b9d8442556~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1352&h=625&s=177421&e=png&b=fcf5e1)
+- 通过`_dirty`变量控制computed的getter执行，触发reactive对象的getter方法，收集依赖（**收集的是创建computedRef对象时内部创建的`ReactiveEffect`对象**）。（这里非常重要的一点，只要触发computed get value就有可能重新执行computed的getter）
+- 2s后，触发reactive对象的setter方法，触发依赖执行。**这里就需要注意了。由于触发的是computedRef对象时内部创建的`ReactiveEffect`对象，上面挂载的有computed，并且有`scheduler`调度器，所以会先执行含有computed属性的依赖具有`scheduler`调度器的依赖。**
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d8be71836bac43a7b7f5bf95e77efb17~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=970&h=863&s=110959&e=png&b=fcf5e2)
+- 执行调度器，调度器中触发computed对象get value收集的依赖。此时`document.getElementById("app").innerHTML = computedObj.value`执行，又触发computed get value, 执行computed 的getter 方法，返回修改的值。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2d72f804e27f4f6e8fa412383a20dec8~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1263&h=759&s=157641&e=png&b=fcf5e1)
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9126edcc815d4fd1801688ec2d9ce1fb~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1553&h=702&s=142123&e=png&b=fefdfd)
+#### 断点调试
+- 初始化computed
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7e3cf758641f48fe9e223bbbcdd63666~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1609&h=857&s=185473&e=png&b=fdfbfb)
+- 触发computed get value，进行依赖收集，并执行computed传入的getter方法
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d0306c0bacf7440486e8de7f139561fe~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1640&h=800&s=163790&e=png&b=fefdfd)
+- 2s后触发reactive setter,然后触发依赖函数。此时该依赖有computed对象，所以调用`scheduler`调度器
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/190b8a5a80414267916077a211228713~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1636&h=869&s=203616&e=png&b=fdfbfb)
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/0d6ee8be34e944668659e3bcb81c87f6~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1652&h=858&s=190372&e=png&b=fdfbfb)
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/0abd912848c64ae6a4e6b870dd4c8934~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1640&h=876&s=182317&e=png&b=fefefe)
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/31aa7cee8c974745b0bd30139586b4c6~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1631&h=878&s=204527&e=png&b=fefcfc)
+- 触发effect回调，又会触发computed对象的get value。获取最新值。**这里需要注意，虽然2s后触发了reactive的setter方法，但是并没有在trigger中直接执行computed的getter函数，而是通过再次触发computed get value通过`_dirty`变量来控制getter的触发的。**
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d18f7626d8884a4faf7d976edafe96ce~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1584&h=873&s=179412&e=png&b=fdfcfc)
+#### 总结
+- 创建computedRefEmpl实例，内部通过_dirty变量判断是否触发依赖。触发依赖放在ReactiveEffect的调度器中执行，这样就可以区分普通的响应式数据和computed响应式数据执行了。**并且先去触发computed的依赖函数，再去触发普通响应数据的依赖函数。(这样是为了做到computed缓存的)**
+- 获取computed变量时，触发get value执行，然后收集依赖。并执行传入的依赖getter。并修改`_dirty`为false，如果依赖数据未变化，那么它将返回缓存的值。
+
+只要修改响应式数据，就会触发调度器执行，然后`_dirty`设置为false，然后就会再次重新执行getter，拿到最新值。

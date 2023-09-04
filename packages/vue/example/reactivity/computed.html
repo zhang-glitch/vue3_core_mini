@@ -27,6 +27,7 @@
     effect(() => {
       // 触发ComputedRefImpl 的 get value
       document.getElementById("app").innerHTML = computedObj.value
+      // 触发两次computed，会搜集上一次的computed getter到computed reactiveEffect的deps中。
       document.getElementById("app").innerHTML = computedObj.value
     })
 

@@ -62,6 +62,7 @@ class RefImpl<T extends unknown> {
  */
 export function trackRefValue(ref: RefBase<any>) {
   // 只有effect有值时才收集依赖
+  // 注意：所有的reactiveEffect都会被加入到deps中。普通响应式依赖加入到，对应的key => map.set(deps)中。 computed, ref对象的加入到初始化创建的reactiveEffect对象中的deps。
   if (activeEffect) {
     trackEffects(ref.deps || (ref.deps = createDeps()))
   }
