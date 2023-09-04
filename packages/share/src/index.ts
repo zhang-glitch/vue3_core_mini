@@ -12,3 +12,10 @@ export function isObject(value) {
 export function hasChanged(val, oldVal) {
   return !Object.is(val, oldVal)
 }
+
+/**
+ * 是否是函数
+ */
+export function isFunction(val) {
+  return typeof val === "function"
+}

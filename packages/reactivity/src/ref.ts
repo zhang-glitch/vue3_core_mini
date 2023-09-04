@@ -11,6 +11,11 @@ export function isRef(r: any): r is Ref {
   return !!(r && r.__v_isRef === true)
 }
 
+type RefBase<T> = {
+  deps?: Deps
+  value: T
+}
+
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
@@ -47,7 +52,7 @@ class RefImpl<T extends unknown> {
       this._rawValue = newValue
       // 赋值最新值
       this._value = toReactive(newValue)
-      triggerRefValue(this, newValue)
+      triggerRefValue(this)
     }
   }
 }
@@ -55,7 +60,7 @@ class RefImpl<T extends unknown> {
 /**
  * 基本数据类型的依赖收集
  */
-export function trackRefValue(ref: RefImpl<unknown>) {
+export function trackRefValue(ref: RefBase<any>) {
   // 只有effect有值时才收集依赖
   if (activeEffect) {
     trackEffects(ref.deps || (ref.deps = createDeps()))
@@ -65,7 +70,7 @@ export function trackRefValue(ref: RefImpl<unknown>) {
 /**
  * 基本数据类型的依赖触发
  */
-export function triggerRefValue(ref: RefImpl<unknown>, value: any) {
+export function triggerRefValue(ref: RefBase<any>) {
   if (ref.deps) {
     triggerEffects(ref.deps)
   }

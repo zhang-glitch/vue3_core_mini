@@ -1,3 +1,4 @@
+import { ComputedRefImpl } from './computed';
 import createDeps, { type Deps } from './dep'
 export let activeEffect: ReactiveEffect
 
@@ -6,7 +7,8 @@ export let targetWeakMap: WeakMap<object, Map<any, Deps>> = new WeakMap()
 
 // 内部定义一个fn属性和run方法
 export class ReactiveEffect<T = any> {
-  constructor(public fn: () => T) {}
+  computed?: ComputedRefImpl<T>
+  constructor(public fn: () => T, public scheduler: (() => any) | null = null) {}
 
   run() {
     // 将当前reactiveEffect对象赋值给全局对象。
@@ -65,6 +67,12 @@ export function trigger(target: object, key: string | symbol) {
  */
 export function triggerEffects(deps: Deps) {
   [...deps].forEach(effect => {
+    if(effect.computed) {
+      triggerEffect(effect)
+    }
+  });
+
+  [...deps].forEach(effect => {
     triggerEffect(effect)
   })
 }
@@ -74,7 +82,11 @@ export function triggerEffects(deps: Deps) {
  * 触发一个依赖函数
  */
 export function triggerEffect(effect: ReactiveEffect) {
-  effect.run()
+  if(effect.scheduler) {
+    effect.scheduler()
+  }else {
+    effect.run()
+  }
 }
 
 // 接收一个函数并触发。
