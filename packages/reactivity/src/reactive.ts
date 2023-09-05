@@ -3,6 +3,10 @@ import { isObject } from "@vue/share"
 
 export const proxyMap: WeakMap<object, any> = new WeakMap()
 
+export enum ReactiveFlags  {
+  IS_REACTIVE = "__is_reactive"
+}
+
 // 返回一个proxy
 function createReactiveObj(
   target: object,
@@ -13,6 +17,9 @@ function createReactiveObj(
   let proxyObj = proxyMap.get(target)
   if (!proxyObj) {
     proxyMap.set(target, (proxyObj = new Proxy(target, baseHandlers)))
+    // 表示该对象是reactive类型
+    proxyObj[ReactiveFlags.IS_REACTIVE] = true
+
     return proxyObj
   }
 
@@ -27,3 +34,8 @@ export function reactive(target: object) {
 // ref转reactive
 export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value as object) : value
+
+  // 判断是否是reactive类型
+  export function isReactive(value) {
+    return !!(value && value[ReactiveFlags.IS_REACTIVE])
+  }

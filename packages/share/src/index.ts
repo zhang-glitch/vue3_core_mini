@@ -19,3 +19,8 @@ export function hasChanged(val, oldVal) {
 export function isFunction(val) {
   return typeof val === "function"
 }
+
+/**
+ * 空对象
+ */
+export const EMPTY_OBJ: {readonly [key: string]: any} = {}

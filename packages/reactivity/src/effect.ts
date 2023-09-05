@@ -4,17 +4,26 @@ export let activeEffect: ReactiveEffect
 
 // 定义deps对象接口类型
 export let targetWeakMap: WeakMap<object, Map<any, Deps>> = new WeakMap()
+export type SchedulerEffect =  () => any
+export interface ReactiveEffectOptions {
+  lazy?: boolean
+  scheduler?: SchedulerEffect
+}
 
 // 内部定义一个fn属性和run方法
 export class ReactiveEffect<T = any> {
   computed?: ComputedRefImpl<T>
-  constructor(public fn: () => T, public scheduler: (() => any) | null = null) {}
+  constructor(public fn: () => T, public scheduler: SchedulerEffect | null = null) {}
 
   run() {
     // 将当前reactiveEffect对象赋值给全局对象。
     activeEffect = this
     // 运行fn
     return this.fn()
+  }
+  
+  stop() {
+
   }
 }
 
@@ -96,10 +105,17 @@ export function triggerEffect(effect: ReactiveEffect) {
 }
 
 // 接收一个函数并触发。
-export function effect<T>(fn: () => T) {
+export function effect<T>(fn: () => T, options?: ReactiveEffectOptions) {
   // watchEffect
   // 去保存这个fn
   const _effect = new ReactiveEffect(fn)
-  // 初次加载并执行
-  _effect.run()
+  // 控制代码调度顺序
+  if(options) {
+    Object.assign(_effect, options)
+  }
+  // 懒执行effect
+  if(!options || !options.lazy) {
+    // 初次加载并执行
+    _effect.run()
+  }
 }

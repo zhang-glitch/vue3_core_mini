@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reactive</title>
+  <script src="../../dist/vue.global.js"></script>
+</head>
+<body>
+  <script>
+    const { reactive, effect, queuePreFlushCb } = Vue
+
+    const obj = reactive({
+      age: 1
+    })
+
+    effect(() => {
+      console.log("=======", obj.age)
+    }, {
+      scheduler() {
+        // 他只是将该回调加入到异步队列中。等主线程代码执行完毕后才会执行该异步队列。
+        queuePreFlushCb(() => {
+          console.log("=======", obj.age)
+        })
+      }
+    })
+
+    // 所以触发reactive getter方法调用调度器，他只会将回调加入到异步队列中，并不会执行。
+    obj.age = 2
+    obj.age = 3
+    console.log("执行结束！")
+  </script>
+</body>
+</html>
