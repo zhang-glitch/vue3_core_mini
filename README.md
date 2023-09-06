@@ -482,3 +482,107 @@ setTimeout(() => {
 - 获取computed变量时，触发get value执行，然后收集依赖。并执行传入的依赖getter。并修改`_dirty`为false，如果依赖数据未变化，那么它将返回缓存的值。
 
 只要修改响应式数据，就会触发调度器执行，然后`_dirty`设置为false，然后就会再次重新执行getter，拿到最新值。
+## watch
+### 测试用例
+```js
+const { watch, reactive, effect } = Vue;
+
+const obj = reactive({
+  name: "zh"
+})
+
+
+watch(obj, (val) => {
+  console.log("val", val)
+})
+
+setTimeout(() => {
+  obj.name = "llm"
+}, 2000)
+```
+- 调用watch，创建`ReactiveEffect`对象。
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ab5dbf0110c946fa9f46a72b1af4519c~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1395&h=866&s=231820&e=png&b=fcf5e2)
+- watch依赖收集
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/4441eda831db4877b0e0b7d0788d7384~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1295&h=208&s=41530&e=png&b=fcf5e2)
+- 执行getter，拿到值，赋值给oldValue保存
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8d25c4ab035549a591a4b6f62ffa286a~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=753&h=594&s=64924&e=png&b=fcf5e1)
+- 2s后触发reactive的setter方法，触发依赖，依赖是具有scheduler的，所以执行调度器，即job函数。
+
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/fd2dad179fc14567ab61319e8596b32c~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1259&h=834&s=153499&e=png&b=fcf5e2)
+
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/22cbb92c31084ce18f2c929832cfadef~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1138&h=877&s=122842&e=png&b=fcf5e1)
+- 触发watchCallback
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/febdd233f9e0455b9c78bc23ceb66843~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1158&h=899&s=115665&e=png&b=fcf5e2)
+
+这里需要注意一下，监听对象的变化，我们获取新旧值是一样的，经过上面的分析我们就可以看出，因为oldValue是执行ReactiveEffect中的fn返回的，它返回的是一个对象类型。新值也是这个对象，所以setter修改时，引用不变，所以新旧值是一样的。
+### 断点调试
+- 调用doWatch函数执行初始化watch
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/cbb1f1f479904de8a2866f27190af3eb~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=934&h=691&s=94015&e=png&b=fefdfd)
+- 进行判断，如果是reactive对象，那么就深度监听。
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/602efc76e6694967817f2336a0cb6688~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=865&h=791&s=90000&e=png&b=fefdfd)
+- 对象，递归调用，触发依赖收集
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/17214ab20ff4451ab55972ad0f3ab492~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1099&h=834&s=135992&e=png&b=fdfcfc)
+- 定义job函数
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/72f9297ef16046e38fc61b5991707393~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=823&h=787&s=79263&e=png&b=fefefe)
+- 初始化ReactiveEffect对象和调度器。
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d9a1b514e0064e1fa6c1855d4191c326~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=863&h=800&s=111423&e=png&b=fefefe)
+
+**任何关于响应式的api内部都离不开`ReactiveEffect`类的初始化，他就是通过Proxy get拦截器收集`ReactiveEffect`对象作为依赖，在触发Proxy set拦截器时，查看是否有`scheduler`回调（computed 触发get value的回调，watch第二个参数），如果有就执行，没有就执行普通的响应式回调。**
+
+[watch实现代码](https://github.com/zhang-glitch/vue3_core_mini/tree/watch-scheduler)
+## 调度器Scheduler
+- 控制代码执行顺序。
+```js
+const { reactive, effect } = Vue
+
+const obj = reactive({
+  age: 1
+})
+
+effect(() => {
+  console.log("=======", obj.age)
+}, {
+  scheduler() {
+    setTimeout(() => {
+      console.log("=======", obj.age)
+    })
+  }
+})
+
+obj.age = 2
+console.log("执行结束！")
+```
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/772148f199da4c849359e8a7140a1d9f~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=788&h=280&s=12959&e=png&b=fefefe)
+由上图可知，执行结束先于`=====,2`输出。
+- 控制代码执行逻辑。
+```js
+const { reactive, effect, queuePostFlushCb } = Vue
+
+const obj = reactive({
+  age: 1
+})
+
+effect(() => {
+  console.log("=======", obj.age)
+}, {
+  scheduler() {
+    queuePostFlushCb(() => {
+      console.log("=======", obj.age)
+    })
+  }
+})
+
+obj.age = 2
+obj.age = 3
+console.log("执行结束！")
+```
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/97a9415264f3452a8b69bbdccba1fdc3~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=907&h=325&s=14189&e=png&b=ffffff)
+由上图可知，跳过了`obj.age = 2`的setter逻辑触发。
+
+经过前面的分析，我们发现，scheduler对于计算属性和watch是非常重要的。
