@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../../dist/vue.global.js"></script>
+  <style>
+    .actvie {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    const { h, render, Text, Fragment, Comment } = Vue
+
+    
+    // const vnode = h(Text, "这是一段文本")
+    // render(vnode, document.getElementById("app"))
+    // console.log("vnode", vNode)
+
+    // const vnode = h(Fragment, "fragment片段")
+    // render(vnode, document.getElementById("app"))
+    // console.log("vnode", vnode)
+
+    const vnode = h(Comment, "一段注释")
+    console.log("vnode", vnode)
+  </script>
+</body>
+
+</html>

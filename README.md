@@ -586,3 +586,99 @@ console.log("执行结束！")
 由上图可知，跳过了`obj.age = 2`的setter逻辑触发。
 
 经过前面的分析，我们发现，scheduler对于计算属性和watch是非常重要的。
+
+
+## 运行时
+- h函数生成vnode。
+- render函数渲染vnode，生成真实的dom。
+
+[dom树](https://zh.javascript.info/dom-nodes)
+
+runtime-core 和 runtime-dom分开编写的原因： 不同的宿主环境使用不同的api。runtime-core只涉及运行时核心代码。暴露出统一的接口，让不同宿主环境定制化。
+
+因为vue中在做一些标记计算时，大量使用到位运算，所以我们需要了解一些基础的 [位运算](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Expressions_and_Operators#%E4%BD%8D%E8%BF%90%E7%AE%97%E7%AC%A6)。
+- `左移 a << b`: 表示a乘以2的b次方
+- `右移 a >> b`: 表示a除以2的b次方，小于1的都为0。
+```js
+1 << 2
+4
+1 >> 2
+0
+1 >> 4
+0
+2 >> 4
+0
+```
+- [`无符号右移 (左边空出位用 0 填充)`](https://blog.csdn.net/fengqing5578/article/details/88224394#:~:text=%E6%80%BB%E7%BB%93%EF%BC%9A%E6%AD%A3%E6%95%B0%E7%9A%84%E5%B7%A6%E7%A7%BB%E4%B8%8E%E5%8F%B3%E7%A7%BB%EF%BC%8C%E8%B4%9F%E6%95%B0%E7%9A%84%E6%97%A0%E7%AC%A6%E5%8F%B7%E5%8F%B3%E7%A7%BB%EF%BC%8C%E5%B0%B1%E6%98%AF%E7%9B%B8%E5%BA%94%E7%9A%84%E8%A1%A5%E7%A0%81%E7%A7%BB%E4%BD%8D%E6%89%80%E5%BE%97%EF%BC%8C%E5%9C%A8%E9%AB%98%E4%BD%8D%E8%A1%A50%E5%8D%B3%E5%8F%AF%E3%80%82,%E8%B4%9F%E6%95%B0%E7%9A%84%E5%8F%B3%E7%A7%BB%EF%BC%8C%E5%B0%B1%E6%98%AF%E8%A1%A5%E7%A0%81%E9%AB%98%E4%BD%8D%E8%A1%A51%2C%E7%84%B6%E5%90%8E%E6%8C%89%E4%BD%8D%E5%8F%96%E5%8F%8D%E5%8A%A01%E5%8D%B3%E5%8F%AF%E3%80%82): 正数和`a >> b`效果是一样的，但是负数就不一样了。
+- `按位与 a & b`: 表示a、b二进制**对应位置全部为1**,就为1。然后再转为10进制。
+```js
+15 & 9 = 1111 & 1001 = 1001 = 9
+```
+- `按位或 a | b`: 表示a、b二进制**对应位置只要有一位为1**,就为1。然后再转为10进制。
+```js
+15 | 9 = 1111 | 1001 = 1111 = 15
+```
+- `按位异或 a ^ b`: 表示a、b二进制**对应位置二进制都不一样**。才为1。然后再转为10进制。
+```js
+15 | 9 = 1111 | 1001 = 0110 = 6
+```
+- `按位非 ~a`: ~~表示将a二进制对应位置反位。(0改成1,1改成0)，然后转为10进制。~~ **注意位运算符“非”将所有的 32 位取反，而值的最高位 (最左边的一位) 为 1 则表示负数** 因为32位最后一位表示符号。 计算秘诀就是**值 + 1**取反（正数变负数，负数变正数）。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2b100f92c8b54ef2b86709caae650e70~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1027&h=340&s=255937&e=png&b=f6f6f6)
+```js
+// 我以为的
+~15 = ~1111  = 0000 = 0
+// -（原值 + 1）
+~15 = -16
+```
+**话说看完这些我已经有点晕了。记住`>> 、<<、| 、 &`即可。**
+### h
+####  h函数参数处理，调用createVNode函数
+类似于适配器模式，主要是处理参数的差异，然后调用createVNode函数创建VNode。**注意h函数不是只能传递三个参数，他会将三个参数往后的都作为children。**
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b502615ed7054d94b958fb78080beb6e~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1198&h=887&s=207846&e=png&b=fcf5e1)
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a50dff09f11c4be0984b5ea64c1646b8~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1247&h=651&s=99838&e=png&b=fefafa)
+
+#### 调用createVnode时，我们需要做了一些优化。
+#####  [动态节点做标记 patchFlag](https://template-explorer.vuejs.org)
+- 标记区分不同的类型。
+- diff算法时，可以区分静态节点（不做处理），以及不同类型的动态节点。
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/aec844a9cbc6417ba5771e8a0e1427ef~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1875&h=518&s=89626&e=png&b=1e2022)
+vue2、3模板编译时进行优化对比
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9e4bdc325e414a05995b87cfe74fa0fa~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=569&h=543&s=170035&e=png&b=faf7f7)
+
+##### [静态节点提升作用域 hoistStatic](https://template-explorer.vuejs.org)
+- 将静态节点的定义提升到父级作用域缓存起来。
+- 多个相邻的静态节点会被合并起来，作为一个静态的html模板
+
+这种优化是一个典型的空间换时间的优化。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b935b677aa3c4281bfed7b540fcae350~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1905&h=885&s=196228&e=png&b=1d1f21)
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/fda6f58131074b65bc4ee6530fac7ae6~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1900&h=864&s=162514&e=png&b=1d1f21)
+
+##### [事件缓存 cacheHandler](https://template-explorer.vuejs.org)
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/659dadf0a8e4446887b01b92cc10c441~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1894&h=784&s=62327&e=png&b=1d1f21)
+
+##### 标记节点类型shapeFlag（父节点和子节点）
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c669cd1da4c542e8a1c2276cdbc2c8ae~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1536&h=748&s=388206&e=png&b=fbf4e1)
+
+#### `createVNode，createBaseVNode`基本逻辑，最终输出标准vnode
+- 处理type传入的类型,赋值，然后通过children的类型和type的类型`按位或`算出shapeFlag。
+    - element + string children = 9
+    - element + array chidlren = 17
+
+第一次赋值区分`字符串，组件，Text, Fragment, Comment, Suspense, Teleport`等类型。其中Text, Comment, Fragment类型都是Vue内置的类型，都是Symbol类型。使用时需要导入。
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/85c7229b9b494e098fb22786a43b0922~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1194&h=498&s=120542&e=png&b=fdf6e3)
+第二次赋值区分children的类型值。
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/623543bdb9bf4a759d04d058712c856d~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1061&h=804&s=132469&e=png&b=fcf5e2)
+
+- 标准化props(normalizeClass, normalizeStyle)，处理class, style增强写法。
+- 标准化children(normalizeChidlren)，然后赋值给VNode对象。
+
+**通过断点调试发现，vnode的生成是先执行children的h函数，再执行外部的h函数。**
+
+h函数的执行还是比较简单的，主要就是上面所讲到的问题，搞清楚就没啥问题了。
