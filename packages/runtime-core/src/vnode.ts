@@ -88,16 +88,24 @@ function normalizeClass(cklass: any) {
     res = cklass
   } else if (isArray(cklass)) {
     // 处理每一个子项，可能还是字符串，数组，对象
-    for(let item of cklass) {
+    for (let item of cklass) {
       const normalized = normalizeClass(item)
-      res += normalized + " "
+      res += normalized + ' '
     }
   } else if (isObject(cklass)) {
-    for(let key in cklass) {
-      if(cklass[key]) {
-        res += key + " "
+    for (let key in cklass) {
+      if (cklass[key]) {
+        res += key + ' '
       }
     }
-  } 
+  }
   return res.trim()
+}
+
+/**
+ * 判断是否是相同类型节点
+ */
+
+export function isSameVNodeType(n1, n2) {
+  return n1.type === n2.type && n1.key === n2.key
 }

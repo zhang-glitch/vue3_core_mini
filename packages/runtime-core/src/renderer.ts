@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, isString } from '@vue/share'
-import { Comment, Fragment, Text, VNode } from './vnode'
+import { Comment, Fragment, Text, VNode, isSameVNodeType } from './vnode'
 import { ShapeFlags } from 'packages/share/src/shapeFlags'
 
 export interface RendererOptions {
@@ -48,6 +48,12 @@ function baseCreateRenderer(options: RendererOptions) {
     // 两节点相同
     if (oldVNode === newVNode) return
 
+    // 判断节点是否相同
+    if (oldVNode && !isSameVNodeType(oldVNode, newVNode)) {
+      // 不是相同节点卸载
+      unmount(oldVNode)
+      oldVNode = null
+    }
     // 开始区分不同节点
     const { type, shapeFlag } = newVNode
 
@@ -196,13 +202,25 @@ function baseCreateRenderer(options: RendererOptions) {
   }
 
   /**
+   * 卸载元素
+   */
+
+  function unmount(n1) {
+    hostRemove(n1.el)
+  }
+
+  /**
    * 组件处理
    */
   function processComponent(n1: VNode | null, n2: VNode, container, anchor) {}
 
   const render = (vnode: VNode, container) => {
+    // 新节点存在旧节点不存在
     if (vnode == null) {
       // TODO: 卸载
+      if (container._vnode) {
+        unmount(container._vnode)
+      }
     } else {
       // 打补丁patch / mount
       patch(container._vnode, vnode, container)
