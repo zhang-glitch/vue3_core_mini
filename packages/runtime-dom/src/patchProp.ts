@@ -2,6 +2,7 @@ import { isOn } from '@vue/share'
 import { patchClass } from './modules/patchClass'
 import { patchDomProp } from './modules/patchDomProp'
 import { patchAttr } from './modules/patchAttr'
+import { patchStyle } from './modules/patchStyle'
 
 // 只处理单种props，在外层遍历
 export function patchProp(el, key, prevValue, nextValue) {
@@ -10,6 +11,7 @@ export function patchProp(el, key, prevValue, nextValue) {
     patchClass(el, nextValue)
   } else if (key === 'style') {
     // TODO: 处理style
+    patchStyle(el, prevValue, nextValue)
   } else if (isOn(key)) {
     // TODO: 处理事件
   } else if (shouldSetAsProp(el, key)) {
