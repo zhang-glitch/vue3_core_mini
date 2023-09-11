@@ -1,5 +1,7 @@
 import { isOn } from '@vue/share'
 import { patchClass } from './modules/patchClass'
+import { patchDomProp } from './modules/patchDomProp'
+import { patchAttr } from './modules/patchAttr'
 
 // 只处理单种props，在外层遍历
 export function patchProp(el, key, prevValue, nextValue) {
@@ -10,5 +12,21 @@ export function patchProp(el, key, prevValue, nextValue) {
     // TODO: 处理style
   } else if (isOn(key)) {
     // TODO: 处理事件
+  } else if (shouldSetAsProp(el, key)) {
+    // dom对象属性
+    patchDomProp(el, key, nextValue)
+  } else {
+    // 其他属性
+    patchAttr(el, key, nextValue)
   }
+}
+
+function shouldSetAsProp(el, key) {
+  if (key === 'form') return false
+
+  if (key === 'type' && el.tagName === 'TEXTAREA') return false
+
+  if (key === 'list' && el.tagName === 'INPUT') return false
+
+  return key in el
 }
