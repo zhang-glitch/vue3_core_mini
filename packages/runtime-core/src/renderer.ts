@@ -35,7 +35,8 @@ function baseCreateRenderer(options: RendererOptions) {
     insert: hostInsert,
     remove: hostRemove,
     createText: hostCreateText,
-    setText: hostSetText
+    setText: hostSetText,
+    createComment: hostCreateComment
   } = options
 
   /**
@@ -65,6 +66,7 @@ function baseCreateRenderer(options: RendererOptions) {
     switch (type) {
       case Comment:
         // TODO: patchComment
+        processCommentNode(oldVNode, newVNode, container, anchor)
         break
       case Fragment:
         // TODO: patchFragment
@@ -229,6 +231,20 @@ function baseCreateRenderer(options: RendererOptions) {
       if (n2.children !== n1.children) {
         hostSetText(el, n2.children as string)
       }
+    }
+  }
+
+  /**
+   * 注释节点处理
+   */
+  function processCommentNode(n1: VNode | null, n2: VNode, container, anchor) {
+    if (n1 == null) {
+      // 挂载
+      n2.el = hostCreateComment(n2.children)
+      hostInsert(n2.el, container, anchor)
+    } else {
+      // 不支持更新注释
+      n1.el = n2.el
     }
   }
 
