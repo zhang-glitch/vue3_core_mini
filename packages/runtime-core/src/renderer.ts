@@ -1,6 +1,7 @@
 import { EMPTY_OBJ, isString } from '@vue/share'
 import { Comment, Fragment, Text, VNode, isSameVNodeType } from './vnode'
 import { ShapeFlags } from 'packages/share/src/shapeFlags'
+import { normalizeVNode } from './componentRenderUtils'
 
 export interface RendererOptions {
   // props diff
@@ -70,6 +71,7 @@ function baseCreateRenderer(options: RendererOptions) {
         break
       case Fragment:
         // TODO: patchFragment
+        processFragment(oldVNode, newVNode, container, anchor)
         break
       case Text:
         // TODO: patchText
@@ -245,6 +247,29 @@ function baseCreateRenderer(options: RendererOptions) {
     } else {
       // 不支持更新注释
       n1.el = n2.el
+    }
+  }
+
+  /**
+   * 片段节点处理
+   */
+  function processFragment(n1: VNode | null, n2: VNode, container, anchor) {
+    if (n1 == null) {
+      // TODO: mountChildren挂载
+      mountChildren(n2, container, anchor)
+    } else {
+      // Fragment挂载container依旧是render的根节点，而不是以前旧节点的el
+      patchChildren(n1, n2, container, anchor)
+    }
+  }
+
+  /**
+   * 挂载children
+   */
+  function mountChildren(vnode: VNode, container, anchor) {
+    for (let item of vnode.children) {
+      const childVNode = normalizeVNode(item)
+      patch(null, childVNode, container, anchor)
     }
   }
 
