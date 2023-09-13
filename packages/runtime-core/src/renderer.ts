@@ -14,6 +14,9 @@ export interface RendererOptions {
   insert: (el: Element, parent: Element, anchor?: any | null) => void
   // 卸载指定dom
   remove: (el) => void
+  createText(text: string): Element
+  createComment(text: string): Element
+  setText(node: Element, text: string): void
 }
 
 /**
@@ -30,7 +33,9 @@ function baseCreateRenderer(options: RendererOptions) {
     createElement: hostCreateElement,
     setElementText: hostSetElementText,
     insert: hostInsert,
-    remove: hostRemove
+    remove: hostRemove,
+    createText: hostCreateText,
+    setText: hostSetText
   } = options
 
   /**
@@ -66,6 +71,7 @@ function baseCreateRenderer(options: RendererOptions) {
         break
       case Text:
         // TODO: patchText
+        processText(oldVNode, newVNode, container, anchor)
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -207,6 +213,23 @@ function baseCreateRenderer(options: RendererOptions) {
 
   function unmount(n1) {
     hostRemove(n1.el)
+  }
+
+  /**
+   * 文本节点处理
+   */
+  function processText(n1: VNode | null, n2: VNode, container, anchor) {
+    if (n1 == null) {
+      // 挂载
+      n2.el = hostCreateText(n2.children)
+      hostInsert(n2.el, container, anchor)
+    } else {
+      // 更新
+      const el = (n2.el = n1.el!)
+      if (n2.children !== n1.children) {
+        hostSetText(el, n2.children as string)
+      }
+    }
   }
 
   /**

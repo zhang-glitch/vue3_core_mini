@@ -12,6 +12,7 @@ export interface VNode {
   props: any
   shapeFlag: number
   children: any
+  el?: Element
 }
 
 export function isVNode(val) {

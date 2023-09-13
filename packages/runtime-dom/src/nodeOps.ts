@@ -27,5 +27,19 @@ export const nodeOps = {
     if (parent) {
       parent.removeChild(child)
     }
+  },
+  /**
+   * 创建文本节点
+   */
+  createText: text => doc.createTextNode(text),
+  /**
+   * 创建注释节点
+   */
+  createComment: text => doc.createComment(text),
+  /**
+   * 创建设置文本节点
+   */
+  setText: (node, text) => {
+    node.nodeValue = text
   }
 }
