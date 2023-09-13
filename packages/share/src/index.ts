@@ -41,7 +41,8 @@ export function isArray(val) {
 /**
  * 判断是否是以on开头的事件
  */
-
+const event = /^on[^a-z]/
 export function isOn(val) {
-  return val && val.startsWith('on')
+  // return val && val.startsWith('on')
+  return val && event.test(val)
 }
