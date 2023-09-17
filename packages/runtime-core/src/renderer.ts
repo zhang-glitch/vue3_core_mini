@@ -1,7 +1,10 @@
+import { ReactiveEffect } from './../../reactivity/src/effect'
 import { EMPTY_OBJ, isString } from '@vue/share'
 import { Comment, Fragment, Text, VNode, isSameVNodeType } from './vnode'
 import { ShapeFlags } from 'packages/share/src/shapeFlags'
-import { normalizeVNode } from './componentRenderUtils'
+import { normalizeVNode, renderComponentRoot } from './componentRenderUtils'
+import { createComponentInstance, setupComponent } from './component'
+import { queuePreFlushCb } from './scheduler'
 
 export interface RendererOptions {
   // props diff
@@ -276,7 +279,67 @@ function baseCreateRenderer(options: RendererOptions) {
   /**
    * 组件处理
    */
-  function processComponent(n1: VNode | null, n2: VNode, container, anchor) {}
+  function processComponent(n1: VNode | null, n2: VNode, container, anchor) {
+    if (n1 == null) {
+      // TODO: 挂载
+      mountComponent(n2, container, anchor)
+    } else {
+      // TODO: 更新
+      patchComponent(n1, n2, container, anchor)
+    }
+  }
+
+  /**
+   * 组件挂载
+   */
+  function mountComponent(vnode, container, anchor) {
+    //创建组件实例
+    const instance = (vnode.component = createComponentInstance(vnode))
+    // 初始化组件
+    setupComponent(instance)
+
+    // 设置组件渲染
+    setupRenderEffect(instance, vnode, container, anchor)
+  }
+
+  /**
+   * 组件渲染
+   */
+  function setupRenderEffect(instance, vnode, container, anchor) {
+    // 创建reactiveEffect fn函数 (组件挂载和更新)
+    const componentUpdateFn = () => {
+      // 当前处于 mounted 之前，即执行 挂载 逻辑
+      if (!instance.isMounted) {
+        // 生成组件vnode
+        const subTree = (instance.subTree = renderComponentRoot(instance))
+        // 挂载组件
+        patch(null, subTree, container, anchor)
+        // 保存组件根节点
+        vnode.el = subTree.el
+
+        // 修改 mounted 状态
+        instance.isMounted = true
+      } else {
+      }
+    }
+
+    // 创建依赖对象
+    const effect = (instance.effect = new ReactiveEffect(
+      componentUpdateFn,
+      () => queuePreFlushCb(update)
+    ))
+
+    // 生成 update 函数
+    const update = (instance.update = () => effect.run())
+
+    // 触发 update 函数，本质上触发的是 componentUpdateFn
+    update()
+  }
+
+  /**
+   * 组件更新
+   */
+  function patchComponent(n1: VNode | null, n2: VNode, container, anchor) {}
 
   const render = (vnode: VNode, container) => {
     // 新节点存在旧节点不存在
