@@ -15,12 +15,13 @@ export function normalizeVNode(child) {
  */
 
 export function renderComponentRoot(instance) {
-  const { vnode, render } = instance
+  const { vnode, render, data } = instance
   let result
   try {
     // 解析到状态组件
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode(render())
+      // 改变render函数this指向。
+      result = normalizeVNode(render!.call(data, data))
     }
   } catch (error) {
     console.error(error)

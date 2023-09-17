@@ -1,3 +1,5 @@
+import { applyOptions } from './componentOptions'
+
 /**
  * 创建组件实例
  */
@@ -12,7 +14,8 @@ export function createComponentInstance(vnode) {
     subTree: null!, // render 函数的返回值
     effect: null!, // ReactiveEffect 实例
     update: null!, // update 函数，触发 effect.run
-    render: null // 组件内的 render 函数
+    render: null, // 组件内的 render 函数
+    data: null
   }
 
   return instance
@@ -48,4 +51,7 @@ function finishComponentSetup(instance) {
     // 为 render 赋值
     instance.render = Component.render
   }
+
+  // 处理options api数据
+  applyOptions(instance)
 }
