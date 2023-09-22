@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/share'
 import { applyOptions } from './componentOptions'
 
 /**
@@ -36,7 +37,9 @@ function setupStatefulComponent(instance) {
   const { setup } = Component
   // 存在 setup ，则直接获取 setup 函数的返回值即可
   if (setup) {
+    // 拿到渲染函数
     const setupResult = setup()
+    handleSetupResult(instance, setupResult)
   } else {
     // 获取组件实例
     finishComponentSetup(instance)
@@ -54,4 +57,11 @@ function finishComponentSetup(instance) {
 
   // 处理options api数据
   applyOptions(instance)
+}
+
+export function handleSetupResult(instance, setupResult) {
+  if (isFunction(setupResult)) {
+    instance.render = setupResult
+  }
+  finishComponentSetup(instance)
 }

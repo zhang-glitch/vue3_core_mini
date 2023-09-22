@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>runtime demo</title>
+  <script src="../../dist/vue.global.js"></script>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    // 运行时可以利用render把vnode渲染成真实的dom节点。 
+    const {render,h,ref}=Vue
+
+    const myComponent={
+      setup () {
+        const res=ref({
+          name: "zh"
+        })
+
+        setTimeout(() => {
+          res.value.name="llm"
+        },2000)
+        console.log(this)
+        return () => h("div",res.value.name)
+      }
+    }
+
+    // 生成vnode。单纯挂载组件
+    const vnode=h(myComponent)
+
+    // 挂载容器
+    const container=document.getElementById("app")
+    // 挂在虚拟dom
+    render(vnode,container)
+  </script>
+</body>
+
+</html>
