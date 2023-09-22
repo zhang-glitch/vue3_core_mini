@@ -310,6 +310,10 @@ function baseCreateRenderer(options: RendererOptions) {
     const componentUpdateFn = () => {
       // 当前处于 mounted 之前，即执行 挂载 逻辑
       if (!instance.isMounted) {
+        // 挂载之前触发beforeMount
+        if (instance.bm) {
+          instance.bm()
+        }
         // 生成组件vnode
         const subTree = (instance.subTree = renderComponentRoot(instance))
         // 挂载组件
@@ -317,9 +321,26 @@ function baseCreateRenderer(options: RendererOptions) {
         // 保存组件根节点
         vnode.el = subTree.el
 
+        // 挂载之后触发mounted
+        if (instance.m) {
+          instance.m()
+        }
+
         // 修改 mounted 状态
         instance.isMounted = true
       } else {
+        // 当响应式状态发生变化，那么将会触发组件更新
+        let { next, vnode } = instance
+        if (!next) {
+          next = vnode
+        }
+
+        const nextTree = renderComponentRoot(instance)
+        const prevTree = instance.subTree
+        instance.subTree = nextTree
+        patch(prevTree, nextTree, container, anchor)
+
+        next.el = nextTree.el
       }
     }
 
