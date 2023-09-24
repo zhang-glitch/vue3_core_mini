@@ -1158,3 +1158,45 @@ export function patchEvent(
 ![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ea01a11f5bff4b80b7735f7776030c2d~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1282&h=928&s=170631&e=png&b=fcf5e1)
 
 [运行时源码简单实现](https://github.com/zhang-glitch/vue3_core_mini/tree/render)
+
+### diff算法分析
+
+在vue中如果想要进行diff算法对比，那么oldVNode和newVNode就必须具有相同的type和key。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/faef99431ca9456c8d7df610649994a0~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1234&h=553&s=128014&e=png&b=fcf5e2)
+#### 情况一（自前向后比较新旧节点）
+自前向后比对对应位置的新旧vnode。如果type和key相同则直接进行patch。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/4537a560f98342c883fe2c57112d1cbd~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=973&h=864&s=112943&e=png&b=fcf5e2)
+#### 情况二（自后向前比较新旧节点）
+自后向前对比对应位置的新旧vnode,如果type和key相同则直接进行patch。
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/1a0a7a6851b64411ae6aec0c2892b66b~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=830&h=856&s=101812&e=png&b=fdf7e3)
+#### 情况三（新节点多于旧节点）
+新节点多于旧节点，这里会有两种情况
+- 新节点多于旧节点的内容在前面
+- 新节点多于旧节点的内容在后面
+
+**这两种情况的区别就是，在前面需要获取到旧节点第一个vnode作为锚点，将新内容插入到他之前。**
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5bf15192e3c94289bc6ee03956c03d5a~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1127&h=847&s=113547&e=png&b=fcf6e2)
+#### 情况四（旧节点多于新节点）
+旧节点多于新节点，直接删除多余的旧节点。
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/77deba4537724608959403c5be3c6c9f~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1128&h=522&s=62609&e=png&b=fdf6e3)
+#### 情况五（乱序节点）
+新旧节点乱序情况下的diff，该diff使用到了最长递增子序列的算法。
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/eee330bf05bb4c1f825e522681ee634c~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1289&h=654&s=259551&e=png&b=fefefe)
+**找出最长递增子序列就是为了能更少的移动节点的顺序。**
+
+通过map对象保存新Vnodes节点key与index的映射。
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/42053733888d4a62ae0b01f1135d2e04~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1255&h=750&s=161965&e=png&b=fcf5e2)
+
+将新节点和旧节点下标进行一一映射，然后循环旧节点，在map对象中查找对应的key。尝试进行patch或者remove旧节点。
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/fbfc7e21778f44afbc6d9c7e6d1b59dd~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1833&h=810&s=269382&e=png&b=fcf6e2)
+
+循环未修补节点次数，进行移动或者挂载单独新节点或者移动节点到达指定位置。
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a945a60c017641a9b0c8e9f5ffddf263~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1112&h=862&s=126541&e=png&b=fcf5e2)
+

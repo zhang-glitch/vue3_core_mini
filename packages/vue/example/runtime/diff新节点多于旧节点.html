@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../../dist/vue.global.js"></script>
+  <style>
+    .actvie {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    const {h,render}=Vue
+
+    const vNode=h("div",{
+      class: "test"
+    },[
+      h("p",{
+        key: 1
+      },"p1"),
+      h("p",{
+        key: 2
+      },"p2"),
+    ])
+    const container=document.getElementById("app")
+    render(vNode,container)
+
+    setTimeout(() => {
+      // 后面插入
+      // const vNode=h("div",{
+      //   class: "test"
+      // },[
+      //   h("p",{
+      //     key: 1
+      //   },"p1"),
+      //   h("p",{
+      //     key: 2
+      //   },"p2"),
+      //   h("p",{
+      //     key: 3
+      //   },"p3"),
+      // ])
+      // 前面插入
+      const vNode=h("div",{
+        class: "test"
+      },[
+        h("p",{
+          key: 3
+        },"p3"),
+        h("p",{
+          key: 1
+        },"p1"),
+        h("p",{
+          key: 4
+        },"p4"),
+        h("p",{
+          key: 2
+        },"p99999"),
+      ])
+      const container=document.getElementById("app")
+      render(vNode,container)
+    },2000)
+  </script>
+</body>
+
+</html>

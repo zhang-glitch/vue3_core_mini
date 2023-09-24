@@ -49,7 +49,8 @@ function createBaseVNode(
     type,
     children,
     props,
-    shapeFlag
+    shapeFlag,
+    key: props && props.key
   } as VNode
   // 标准化children,二次处理shapeFlag
   normalizeChildren(vnode)
